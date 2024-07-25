@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "express": "^4.19.2",
+    "zklib": "https://github.com/alfandy12/js_zklib.git"
+  }
+}
