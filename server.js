@@ -111,6 +111,61 @@ const getAttendanceFromMachine = async () => {
     });
 };
 
+
+const getAttendanceFilteredFromMachine = async () => {
+    return new Promise((resolve, reject) => {
+        ZK.connect(function (err) {
+            if (err) {
+                reject(err);
+                return;
+            }
+            ZK.getAttendance(function (err, attendanceData) {
+                ZK.disconnect();
+                if (err) {
+                    reject(err);
+                    return;
+                }
+
+                // Kelompokkan data berdasarkan ID dan Tanggal (YYYY-MM-DD)
+                const groupedByDate = attendanceData.reduce((result, record) => {
+                    const date = new Date(record.timestamp).toISOString().split('T')[0]; // Ambil tanggal saja
+                    const userId = record.id; // Gunakan id sebagai identifikasi user
+                    if (!result[userId]) {
+                        result[userId] = {};
+                    }
+                    if (!result[userId][date]) {
+                        result[userId][date] = [];
+                    }
+                    result[userId][date].push(record);
+                    return result;
+                }, {});
+
+                // Ambil timestamp paling awal (check-in) dan paling akhir (check-out) untuk setiap ID dan tanggal
+                const filteredAttendance = Object.keys(groupedByDate).map(userId => {
+                    return Object.keys(groupedByDate[userId]).map(date => {
+                        const records = groupedByDate[userId][date];
+
+                        // Urutkan berdasarkan timestamp
+                        records.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+                        return {
+                            id: userId,
+                            date: date,
+                            checkIn: records[0], // Check-in (timestamp paling awal)
+                            checkOut: records[records.length - 1] // Check-out (timestamp paling akhir)
+                        };
+                    });
+                }).flat();
+
+                // Urutkan berdasarkan `date`
+                filteredAttendance.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                resolve(filteredAttendance);
+            });
+        });
+    });
+};
+
 /* ================================================================================ */
 
 
@@ -163,6 +218,16 @@ app.get('/get-users', async (req, res) => {
 app.get('/get-attendance', async (req, res) => {
     try {
         const attendanceData = await getAttendanceFromMachine();
+        res.send([{ status: 'success', message: 'Success get attendance data', data: { attendance: attendanceData } }]);
+    } catch (err) {
+        res.status(500).send([{ status: 'error', message: err.message }]);
+    }
+});
+
+
+app.get('/get-attendance-modify', async (req, res) => {
+    try {
+        const attendanceData = await getAttendanceFilteredFromMachine();
         res.send([{ status: 'success', message: 'Success get attendance data', data: { attendance: attendanceData } }]);
     } catch (err) {
         res.status(500).send([{ status: 'error', message: err.message }]);

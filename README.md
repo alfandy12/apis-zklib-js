@@ -2,7 +2,8 @@
 # Script for REST API for local attendance machine
 
 
-
+#### NOTE BRANCH CUSTOM
+The branch on this "custom" is made based on the company's needs with its attendance device combined with opening the door using fingerprints. which causes too much data for the user
 
 ## Documentation library
 
